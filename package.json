@@ -10,6 +10,15 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^4.15.9"
+    "@astrojs/vue": "^4.5.1",
+    "@nanostores/preact": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "astro": "^4.15.9",
+    "nanostores": "^0.11.3",
+    "vue": "^3.5.9"
+  },
+  "devDependencies": {
+    "sass": "^1.79.3",
+    "uikit": "^3.21.13"
   }
 }
