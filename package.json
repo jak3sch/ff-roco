@@ -1,24 +1,18 @@
 {
-  "name": "ossified-orbit",
+  "name": "roco",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@astrojs/vue": "^4.5.1",
-    "@nanostores/preact": "^0.5.2",
-    "@supabase/supabase-js": "^2.45.4",
-    "astro": "^4.15.9",
-    "nanostores": "^0.11.3",
-    "vue": "^3.5.9"
+    "vue": "^3.4.37"
   },
   "devDependencies": {
-    "sass": "^1.79.3",
-    "uikit": "^3.21.13"
+    "@vitejs/plugin-vue": "^5.1.2",
+    "vite": "^5.4.1"
   }
 }
