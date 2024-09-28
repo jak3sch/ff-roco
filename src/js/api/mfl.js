@@ -45,18 +45,23 @@ export async function readMflApi(
 	type,
 	host,
 	leagueId,
+	token,
 	params,
 	debugInfo = "mfl.js ~ readMflApi"
 ) {
 	let apiQuery =
 		import.meta.env.VITE_API_BASE_URL + "/api/read.php?YEAR=" + currentYear;
 
+	if (type) {
+		apiQuery += "&TYPE=" + type;
+	}
+	
 	if (host) {
 		apiQuery += "&HOST=" + host;
 	}
 
-	if (type) {
-		apiQuery += "&TYPE=" + type;
+	if (token) {
+		apiQuery += "&TOKEN=" + token;
 	}
 
 	if (leagueId) {
@@ -201,7 +206,6 @@ export const writeMflChat = async (message, to = "0000") => {
  * @param {object} response - Response der MFL API
  */
 export const getXmlStatus = (response) => {
-	console.log("🚀 ~ getXmlStatus ~ response:", response);
 	let xmlDoc = new DOMParser().parseFromString(response.data, "text/xml");
 	let status = xmlDoc.querySelector("status")
 		? xmlDoc.querySelector("status").textContent
