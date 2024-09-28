@@ -108,7 +108,7 @@ const submitForm = async (formData) => {
 				? (errorMessage.value = response.data)
 				: (showSpinner.value = true);
 
-			mflData.fetchUserLeagues(response.mflUserId);
+			mflData.fetchUserLeagues(formData.username, response.mflUserId);
 
 			break;
 		default:

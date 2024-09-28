@@ -10,10 +10,15 @@
         @input="formData[field.name] = $event.target.value"
          />
 
-      <Button v-else :text="field.text" :htmlClass="field.htmlClass" />
+      <Button v-else 
+        :text="field.text" 
+        :htmlClass="field.htmlClass" 
+        v-bind:data-uk-spinner="isLoaded ? '{isLoaded}' : null" 
+      />
     </slot>
     
     <div class="uk-alert uk-alert-danger" v-if="props.error">{{ props.error }}</div>
+    
   </form>
 </template>
 
@@ -33,6 +38,7 @@ import Button from "@/components/atoms/Button.vue";
 // ========================================================================
 
 const formData = ref({});
+const isLoaded = ref(false);
 
 const emit = defineEmits(['submit'])
 
@@ -52,6 +58,8 @@ const props = defineProps({
 // ========================================================================
 
 const submitForm = () => { 
+  isLoaded.value = true;
+  
   // emit formData to parent
   emit('submit', toRaw(formData.value));
 }
