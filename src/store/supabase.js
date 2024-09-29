@@ -6,6 +6,8 @@ export const useSupabaseStore = defineStore("supabaseData", {
 	state: () => {
 		return {
 			userLeagues: [],
+			userTeams: [],
+			selectedTeam: []
 		};
 	},
 	actions: {
@@ -16,16 +18,28 @@ export const useSupabaseStore = defineStore("supabaseData", {
 			// fetch supabase data
 			let { data: userLeagues, error } = await supabase
 				.from("userLeagues")
-				.select("id,league_data");
-
+				.select("league_id,league_data,last_modified");
+			
 			// set state
 			this.userLeagues = userLeagues;
 		},
 
-		async writeUserLeagues(importData) {
+		async insertUserLeagues(importData) {
 			const { data, error } = await supabase
 				.from("userLeagues")
-				.upsert(importData, { onConflict: ["id"], ignoreDuplicates: false })
+				.insert(importData)
+				.select();
+			console.log("🚀 ~ insertUserLeagues ~ data:", data)
+
+			if (error) {
+				console.error(error);
+			}
+		},
+
+		async upsertUserLeagues(importData) {
+			const { data, error } = await supabase
+				.from("userLeagues")
+				.upsert(importData, { onConflict: ["league_id"] })
 				.select();
 
 			if (error) {
@@ -34,6 +48,45 @@ export const useSupabaseStore = defineStore("supabaseData", {
 		},
 
 		async deleteUserLeagues(leagues) {},
+
+		// User Teams
+		// ========================================================================
+		
+		async readUserTeams() {
+			// fetch supabase data
+			let { data: userTeams, error } = await supabase
+				.from("userTeams")
+				.select("team_id,team_data");
+
+			// set state
+			this.userTeams = userTeams;
+		},
+
+		async writeUserTeams(importData) {
+			const { data, error } = await supabase
+				.from("userTeams")
+				.upsert(importData, { onConflict: ["team_id"] })
+				.select();
+
+			if (error) {
+				console.error(error);
+			}
+		},
+
+		// User Rosters
+		// ========================================================================
+		
+		async writeUserRosters(importData, teamId) {
+			const { data, error } = await supabase
+				.from("userTeams")
+				.update({roster_data: importData})
+				.eq("team_id", teamId)
+				.select();
+
+			if (error) {
+				console.error(error);
+			}
+		}
 	},
 });
 

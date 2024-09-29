@@ -1,6 +1,5 @@
 <template>
-	<div v-if="showSpinner" data-uk-spinner></div>
-	<Form v-else :fields="fields" :error="errorMessage" @submit="submitForm" />
+	<Form :fields="fields" :error="errorMessage" @submit="submitForm" />
 </template>
 
 <script setup>
@@ -25,7 +24,6 @@ const props = defineProps({
 
 const fields = ref([]);
 const errorMessage = ref("");
-const showSpinner = ref(false);
 const mflData = useMflStore();
 
 //
@@ -102,13 +100,11 @@ const submitForm = async (formData) => {
 				formData.userpassword
 			);
 
-			console.log(response);
+			if (response.type === "danger") {
+				errorMessage.value = response.data;
+			}
 
-			response.type === "danger"
-				? (errorMessage.value = response.data)
-				: (showSpinner.value = true);
-
-			mflData.fetchUserLeagues(formData.username, response.mflUserId);
+			mflData.fetchUserLeagues(response.mflUserId);
 
 			break;
 		default:

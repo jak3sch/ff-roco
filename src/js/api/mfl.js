@@ -70,8 +70,6 @@ export async function readMflApi(
 
 	if (params) {
 		apiQuery += params;
-	} else {
-		apiQuery += "&PARAMS=''";
 	}
 
 	return await axios.post(apiQuery).then((response) => {
