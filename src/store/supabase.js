@@ -56,13 +56,13 @@ export const useSupabaseStore = defineStore("supabaseData", {
 			// fetch supabase data
 			let { data: userTeams, error } = await supabase
 				.from("userTeams")
-				.select("team_id,team_data");
+				.select("team_id,team_data,roster_data");
 
 			// set state
 			this.userTeams = userTeams;
 		},
 
-		async writeUserTeams(importData) {
+		async upsertUserTeams(importData) {
 			const { data, error } = await supabase
 				.from("userTeams")
 				.upsert(importData, { onConflict: ["team_id"] })
@@ -76,11 +76,11 @@ export const useSupabaseStore = defineStore("supabaseData", {
 		// User Rosters
 		// ========================================================================
 		
-		async writeUserRosters(importData, teamId) {
+		async writeUserRosters(importData) {
 			const { data, error } = await supabase
 				.from("userTeams")
-				.update({roster_data: importData})
-				.eq("team_id", teamId)
+				.update({roster_data: importData.roster_data, last_modified: new Date()})
+				.eq("team_id", importData.team_id)
 				.select();
 
 			if (error) {

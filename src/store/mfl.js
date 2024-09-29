@@ -3,6 +3,7 @@ import { supabase } from "@/js/supabase.js";
 import { readMflApi } from "@/js/api/mfl.js";
 import { useUserStore } from "@/store/userData.js";
 import { useSupabaseStore } from "@/store/supabase.js";
+import { compareDataBeforeUpload } from "@/js/helper.js";
 
 export const useMflStore = defineStore("mflData", {
 	state: () => {
@@ -16,11 +17,16 @@ export const useMflStore = defineStore("mflData", {
 		getMflHostFromUrl(url) {
 			return url.match(/https:\/\/(.*)my/)[1];
 		},
-		
+
 		async fetchLeagueInfos(leagueData) {
 			const host = this.getMflHostFromUrl(leagueData.url);
 
-			return await readMflApi("league", host, leagueData.league_id, leagueData.auth_token)
+			return await readMflApi(
+				"league",
+				host,
+				leagueData.league_id,
+				leagueData.auth_token
+			);
 		},
 		async fetchUserLeagues(token = "") {
 			const supabaseData = useSupabaseStore();
@@ -32,125 +38,147 @@ export const useMflStore = defineStore("mflData", {
 			// read user leagues from mfl api
 			await readMflApi("myleagues", "api.", "", token)
 				// add more data to each league object
-				// .then((response) => {
-				// 	return response.data.leagues.league.map((league) => {
-				// 		league.auth_token = token;
-				// 		return league;
-				// 	});
-				// })
-				// .then((response) => {
-				// 	if (!userData.currentUserId) return;
+				.then((response) => {
+					return response.data.leagues.league.map((league) => {
+						league.auth_token = token;
+						return league;
+					});
+				})
+				.then((response) => {
+					if (!userData.currentUserId) return;
 
-				// 	const importData = response.map((league) => {
-				// 		return {
-				// 			league_id: `${userData.currentUserId}_mfl_${league.league_id}`,
-				// 			last_modified: new Date(),
-				// 			league_data: [
-				// 				league,
-				// 			],
-				// 		};
-				// 	});
+					const importData = response.map((league) => {
+						return {
+							league_id: `${userData.currentUserId}_mfl_${league.league_id}`,
+							last_modified: new Date(),
+							league_data: [league],
+						};
+					});
 
-				// 	// TODO: compare data to helper function
+					const dataToWrite = compareDataBeforeUpload(
+						importData,
+						supabaseData.userLeagues,
+						"league_data"
+					);
 
-				// 	// Compare importData with existingLeagues
-				// 	const dataToWrite = importData.filter((importLeague) => {
-				// 		const existingLeague = supabaseData.userLeagues.find(
-				// 			(existing) => existing.id === importLeague.id
-				// 		);
+					// Write data if there are differences
+					if (dataToWrite.length === 0) return;
 
-				// 		return (
-				// 			!existingLeague ||
-				// 			JSON.stringify(Object.keys(existingLeague.league_data).sort()) !==
-				// 				JSON.stringify(Object.keys(importLeague.league_data).sort())
-				// 		);
-				// 	});
+					supabaseData.upsertUserLeagues(dataToWrite);
+					supabaseData.readUserLeagues();
 
-				// 	// Write data if there are differences
-				// 	if (dataToWrite.length > 0) {
-				// 		supabaseData.upsertUserLeagues(dataToWrite);
-				// 		supabaseData.readUserLeagues();
-				// 		// TODO: ligen nach hinzufügen direkt anzeigen
-				// 	}
-
-				// 	// TODO: user feedback if there are no new leagues
-				// })
-				// .then(async () => {
-				// 	await this.fetchUserTeamsFromLeagues();
-				// })
+					// TODO: ligen nach hinzufügen direkt anzeigen
+					// TODO: user feedback if there are no new leagues
+				})
+				.then(async () => {
+					await this.fetchUserTeamsFromLeagues();
+				})
 				.then(async () => {
 					await this.fetchUserRostersFromTeams();
-				})
-				// .catch((error) => {
-				// 	console.error("🚀 ~ fetchUserLeagues ~ error", error
-				// 	);
-				// });
+				});
+			// .catch((error) => {
+			// 	console.error("🚀 ~ fetchUserLeagues ~ error", error
+			// 	);
+			// });
 		},
 		async fetchUserTeamsFromLeagues() {
 			const supabaseData = useSupabaseStore();
-			
-			await supabaseData.readUserLeagues()
-				.then(() => {
+
+			await supabaseData.readUserTeams();
+			await supabaseData.readUserLeagues().then(async () => {
+				const importData = await Promise.all(
 					supabaseData.userLeagues.map(async (league) => {
 						// load more data for each league
-						const franchiseData = await this.fetchLeagueInfos(league.league_data[0]).then((response) => {
-							// find franchise of user
-							return response.data.league.franchises.franchise.find(
-								(franchise) => franchise.id === league.league_data[0].franchise_id
-							);
-						})
-						.then((response) => {
-							return {
-								team_id: `${league.league_id}_${response.id}`,
-								league_id: league.league_id,
-								last_modified: new Date(),
-								team_data: {
-									id: response.id,
-									name: response.name,
-									logo: response.icon ? response.icon : response.logo,
-								}
-							}
-						})
-		
-						supabaseData.writeUserTeams(franchiseData);
-					});
-				})
+						return await this.fetchLeagueInfos(league.league_data[0])
+							.then((response) => {
+								// find franchise of user
+								return response.data.league.franchises.franchise.find(
+									(franchise) =>
+										franchise.id === league.league_data[0].franchise_id
+								);
+							})
+							.then((response) => {
+								return {
+									team_id: `${league.league_id}_${response.id}`,
+									league_id: league.league_id,
+									last_modified: new Date(),
+									team_data: {
+										id: response.id,
+										name: response.name,
+										logo: response.icon ? response.icon : response.logo,
+									},
+								};
+							});
+					})
+				);
+
+				const dataToWrite = compareDataBeforeUpload(
+					importData,
+					supabaseData.userTeams,
+					"team_data"
+				);
+
+				if (dataToWrite.length === 0) return;
+
+				dataToWrite.forEach((team) => {
+					supabaseData.upsertUserTeams(team);
+				});
+			});
 		},
 		async fetchUserRostersFromTeams() {
 			const supabaseData = useSupabaseStore();
-			
+
 			await supabaseData.readUserLeagues();
-			await supabaseData.readUserTeams()
-				.then(() => {
+			await supabaseData.readUserTeams().then(async () => {
+				const importData = await Promise.all(
 					supabaseData.userTeams.map(async (team) => {
-						const leagueData = supabaseData.userLeagues.find(
-							(league) => team.team_id.includes(league.league_data[0].league_id)
+						const leagueData = supabaseData.userLeagues.find((league) =>
+							team.team_id.includes(league.league_data[0].league_id)
 						).league_data[0];
-						
-						const rosterData = await readMflApi(
+
+						return await readMflApi(
 							"rosters",
 							this.getMflHostFromUrl(leagueData.url),
 							leagueData.league_id,
 							encodeURIComponent(leagueData.auth_token),
 							`&FRANCHISE=${team.team_data.id}`
-						)
-						.then((response) => {
+						).then((response) => {
 							const roster = response.data.rosters.franchise?.player;
 
 							// if no players are found, return (e.g. contest leagues)
-							if (!roster) return;
+							let rosterData = [];
 
-							return roster.map((player) => {
-								return {
-									id: player.id,
-									status: player.status,
-								}
-							})
+							if (roster) {
+								rosterData = roster.map((player) => {
+									return {
+										id: player.id,
+										status: player.status,
+									};
+								});
+							}
+
+							return {
+								team_id: team.team_id,
+								roster_data: rosterData,
+							};
 						});
-						
-						supabaseData.writeUserRosters(rosterData, team.team_id);
 					})
+				);
+
+				const dataToWrite = compareDataBeforeUpload(
+					importData,
+					// importData.filter((data) => data),
+					supabaseData.userTeams,
+					"roster_data",
+					"team_id"
+				);
+
+				if (dataToWrite.length === 0) return;
+
+				dataToWrite.forEach((team) => {
+					supabaseData.writeUserRosters(team);
 				});
-		}
+			});
+		},
 	},
 });
